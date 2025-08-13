@@ -1,7 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const apiCall = async (endpoint, options = {}) => {
-  const url = `${API_BASE}${endpoint}`
+  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
   
   const defaultOptions = {
     headers: {
@@ -18,5 +18,14 @@ export const apiCall = async (endpoint, options = {}) => {
     }
   }
 
-  return fetch(url, mergedOptions)
+  console.log('API Call:', url, mergedOptions)
+  
+  try {
+    const response = await fetch(url, mergedOptions)
+    console.log('API Response:', response.status, response.statusText)
+    return response
+  } catch (error) {
+    console.error('API Error:', error)
+    throw error
+  }
 }
