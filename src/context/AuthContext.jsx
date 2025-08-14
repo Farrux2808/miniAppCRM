@@ -27,12 +27,12 @@ export const AuthProvider = ({ children }) => {
         // For development/testing, create a mock user
         if (import.meta.env.DEV) {
           setUser({
-            id: 'test-teacher-id',
+            id: '507f1f77bcf86cd799439011',
             firstName: 'Test',
             lastName: 'Teacher',
             role: 'teacher'
           })
-          setAuthToken('test-token')
+          setAuthToken('mock-token')
         }
         setLoading(false)
         return
@@ -56,12 +56,12 @@ export const AuthProvider = ({ children }) => {
           console.log('Using initDataUnsafe user data:', user)
           // Create mock auth for development
           setUser({
-            id: user.id.toString(),
+            id: '507f1f77bcf86cd799439011',
             firstName: user.first_name,
             lastName: user.last_name,
             role: 'teacher'
           })
-          setAuthToken('mock-token-' + user.id)
+          setAuthToken('mock-token')
         }
         setLoading(false)
         return
@@ -93,12 +93,13 @@ export const AuthProvider = ({ children }) => {
           const user = tg.initDataUnsafe.user
           console.log('Using mock authentication for development')
           setUser({
-            id: user.id.toString(),
+            id: '507f1f77bcf86cd799439011',
             firstName: user.first_name,
             lastName: user.last_name,
-            role: 'teacher'
+            role: 'teacher',
+            telegramData: user
           })
-          setAuthToken('mock-token-' + user.id)
+          setAuthToken('mock-token')
         }
       }
     } catch (error) {
@@ -108,12 +109,19 @@ export const AuthProvider = ({ children }) => {
       if (import.meta.env.DEV) {
         console.log('Using fallback authentication for development')
         setUser({
-          id: 'dev-teacher',
+          id: '507f1f77bcf86cd799439011',
           firstName: 'Dev',
           lastName: 'Teacher',
-          role: 'teacher'
+          role: 'teacher',
+          telegramData: {
+            id: 120,
+            first_name: 'Farrukh',
+            last_name: 'Kholikulov',
+            username: 'Mr_Farruh',
+            photo_url: 'https://t.me/i/userpic/320/Mr_Farruh.jpg'
+          }
         })
-        setAuthToken('dev-token')
+        setAuthToken('mock-token')
       }
     } finally {
       setLoading(false)

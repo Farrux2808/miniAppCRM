@@ -387,6 +387,15 @@ body {
   margin: 0 auto 16px;
 }
 
+.profile-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 16px;
+  display: block;
+}
+
 .profile-name {
   font-size: 20px;
   font-weight: 600;
@@ -396,6 +405,12 @@ body {
 .profile-role {
   color: var(--tg-theme-hint-color, #666);
   font-size: 16px;
+}
+
+.profile-username {
+  color: var(--primary-color);
+  font-size: 14px;
+  margin-top: 4px;
 }
 
 @media (max-width: 480px) {
