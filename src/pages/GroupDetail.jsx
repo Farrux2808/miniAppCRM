@@ -10,11 +10,35 @@ const GroupDetail = ({ group, onBack }) => {
   const [success, setSuccess] = useState('')
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [students, setStudents] = useState([])
   const { authToken } = useAuth()
 
   useEffect(() => {
-    loadLessons()
-  }, [])
+    if (group && authToken) {
+      loadGroupStudents()
+      loadLessons()
+    }
+  }, [group, authToken])
+
+  const loadGroupStudents = async () => {
+    try {
+      const response = await apiCall(`/groups/${group._id}/students`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      })
+
+      if (response.ok) {
+        const studentsData = await response.json()
+        setStudents(studentsData)
+        console.log('Students loaded:', studentsData)
+      } else {
+        console.error('Failed to load students')
+      }
+    } catch (error) {
+      console.error('Error loading students:', error)
+    }
+  }
 
   const loadLessons = async () => {
     try {
@@ -27,12 +51,13 @@ const GroupDetail = ({ group, onBack }) => {
 
       if (response.ok) {
         const lessonsData = await response.json()
-        // Filter lessons for current group and get last 2 lessons + prepare for new one
+        // Filter lessons for current group and get last 2 lessons
         const groupLessons = lessonsData
           .filter(lesson => lesson.groupId._id === group._id)
           .slice(0, 2) // Get last 2 lessons
         
         setLessons(groupLessons)
+        console.log('Lessons loaded:', groupLessons)
       } else {
         setError('Darslarni yuklashda xatolik')
       }
@@ -62,14 +87,17 @@ const GroupDetail = ({ group, onBack }) => {
 
       if (response.ok) {
         setSuccess('Yangi dars muvaffaqiyatli yaratildi')
-        loadLessons()
+        setTimeout(() => setSuccess(''), 3000)
+        loadLessons() // Reload lessons after creating new one
       } else {
         const errorData = await response.json()
         setError(errorData.message || 'Dars yaratishda xatolik')
+        setTimeout(() => setError(''), 3000)
       }
     } catch (error) {
       console.error('Error creating lesson:', error)
       setError('Dars yaratishda xatolik')
+      setTimeout(() => setError(''), 3000)
     }
   }
 
@@ -91,15 +119,18 @@ const GroupDetail = ({ group, onBack }) => {
 
       if (response.ok) {
         setSuccess('Ma\'lumot saqlandi')
+        setTimeout(() => setSuccess(''), 3000)
         loadLessons()
         setShowModal(false)
         setSelectedRecord(null)
       } else {
         setError('Saqlashda xatolik')
+        setTimeout(() => setError(''), 3000)
       }
     } catch (error) {
       console.error('Error saving record:', error)
       setError('Saqlashda xatolik')
+      setTimeout(() => setError(''), 3000)
     }
   }
 
@@ -126,22 +157,6 @@ const GroupDetail = ({ group, onBack }) => {
     }
   }
 
-  // Get unique students from all lessons
-  const getAllStudents = () => {
-    const studentMap = new Map()
-    
-    lessons.forEach(lesson => {
-      lesson.records.forEach(record => {
-        const student = record.studentId
-        if (student && !studentMap.has(student._id)) {
-          studentMap.set(student._id, student)
-        }
-      })
-    })
-    
-    return Array.from(studentMap.values())
-  }
-
   const getStudentRecord = (studentId, lessonIndex) => {
     if (lessonIndex >= lessons.length) return null
     const lesson = lessons[lessonIndex]
@@ -154,12 +169,10 @@ const GroupDetail = ({ group, onBack }) => {
         <div className="back-button" onClick={onBack}>
           ← Orqaga
         </div>
-        <div className="loading">Darslar yuklanmoqda...</div>
+        <div className="loading">Ma'lumotlar yuklanmoqda...</div>
       </div>
     )
   }
-
-  const students = getAllStudents()
 
   return (
     <div>
@@ -172,55 +185,68 @@ const GroupDetail = ({ group, onBack }) => {
       {error && <div className="error">{error}</div>}
       {success && <div className="success">{success}</div>}
 
-      <div className="grade-table">
-        <div className="table-header">
-          <div>O'quvchi</div>
-          <div>{lessons[1] ? formatDate(lessons[1].lessonDate) : 'Dars 1'}</div>
-          <div>{lessons[0] ? formatDate(lessons[0].lessonDate) : 'Dars 2'}</div>
-          <div>Yangi</div>
+      {students.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
+          <p style={{ color: 'var(--tg-theme-hint-color, #666)' }}>
+            Bu guruhda o'quvchilar topilmadi
+          </p>
         </div>
-
-        {students.map((student) => (
-          <div key={student._id} className="table-row">
-            <div className="student-name">
-              {student.firstName} {student.lastName}
-            </div>
-            
-            {/* Previous lesson 1 */}
-            <div 
-              className={`grade-cell ${getCellContent(getStudentRecord(student._id, 1)).className}`}
-              onClick={() => {
-                const record = getStudentRecord(student._id, 1)
-                if (record) handleCellClick(record, 1)
-              }}
-            >
-              {getCellContent(getStudentRecord(student._id, 1)).text}
-            </div>
-
-            {/* Previous lesson 2 */}
-            <div 
-              className={`grade-cell ${getCellContent(getStudentRecord(student._id, 0)).className}`}
-              onClick={() => {
-                const record = getStudentRecord(student._id, 0)
-                if (record) handleCellClick(record, 0)
-              }}
-            >
-              {getCellContent(getStudentRecord(student._id, 0)).text}
-            </div>
-
-            {/* Add new lesson button */}
-            <div>
-              <button 
-                className="add-lesson-btn"
-                onClick={createNewLesson}
-                title="Yangi dars qo'shish"
-              >
-                +
-              </button>
-            </div>
+      ) : (
+        <div className="grade-table">
+          <div className="table-header">
+            <div>O'quvchi</div>
+            <div>{lessons[1] ? formatDate(lessons[1].lessonDate) : 'Dars 1'}</div>
+            <div>{lessons[0] ? formatDate(lessons[0].lessonDate) : 'Dars 2'}</div>
+            <div>Yangi</div>
           </div>
-        ))}
-      </div>
+
+          {students.map((student) => (
+            <div key={student._id} className="table-row">
+              <div className="student-name">
+                {student.firstName} {student.lastName}
+              </div>
+              
+              {/* Previous lesson 1 */}
+              <div 
+                className={`grade-cell ${getCellContent(getStudentRecord(student._id, 1)).className}`}
+                onClick={() => {
+                  const record = getStudentRecord(student._id, 1)
+                  if (record) handleCellClick(record, 1)
+                }}
+              >
+                {getCellContent(getStudentRecord(student._id, 1)).text}
+              </div>
+
+              {/* Previous lesson 2 */}
+              <div 
+                className={`grade-cell ${getCellContent(getStudentRecord(student._id, 0)).className}`}
+                onClick={() => {
+                  const record = getStudentRecord(student._id, 0)
+                  if (record) handleCellClick(record, 0)
+                }}
+              >
+                {getCellContent(getStudentRecord(student._id, 0)).text}
+              </div>
+
+              {/* Add new lesson button - only show for first student */}
+              <div>
+                {student === students[0] ? (
+                  <button 
+                    className="add-lesson-btn"
+                    onClick={createNewLesson}
+                    title="Yangi dars qo'shish"
+                  >
+                    +
+                  </button>
+                ) : (
+                  <div style={{ width: '60px', height: '36px' }}></div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {showModal && selectedRecord && (
         <GradeModal

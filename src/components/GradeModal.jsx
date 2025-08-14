@@ -5,6 +5,10 @@ const GradeModal = ({ record, onSave, onClose }) => {
   const [grade, setGrade] = useState(record.grade || '')
   const [comment, setComment] = useState(record.comment || '')
 
+  const studentName = record.studentId 
+    ? `${record.studentId.firstName} ${record.studentId.lastName}`
+    : 'O\'quvchi'
+
   const handleSave = () => {
     const data = {
       type,
@@ -36,7 +40,7 @@ const GradeModal = ({ record, onSave, onClose }) => {
     <div className="modal" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title">
-          {record.studentId.firstName} {record.studentId.lastName}
+          {studentName}
         </h3>
 
         <div className="modal-buttons">
