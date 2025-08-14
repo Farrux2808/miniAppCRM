@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react'
 import Home from './pages/Home'
 import Profile from './pages/Profile'
 import GroupDetail from './pages/GroupDetail'
+import PhoneLogin from './pages/PhoneLogin'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home')
   const [selectedGroup, setSelectedGroup] = useState(null)
-  const { user, loading } = useAuth()
+  const { user, loading, needsPhoneLogin } = useAuth()
 
   if (loading) {
     return (
@@ -18,6 +19,10 @@ function AppContent() {
         </div>
       </div>
     )
+  }
+
+  if (needsPhoneLogin) {
+    return <PhoneLogin />
   }
 
   if (!user) {
