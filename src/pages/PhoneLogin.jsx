@@ -35,7 +35,7 @@ const PhoneLogin = () => {
           <div className="login-header">
             <div className="login-icon">📱</div>
             <h2>Kirish</h2>
-            <p>Telegram akkauntingiz topilmadi. Telefon raqami va parol orqali kiring.</p>
+            <p>Telegram akkauntingiz tizimda topilmadi. Telefon raqami va parol orqali kirib, Telegram akkauntingizni bog'lang.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -77,7 +77,7 @@ const PhoneLogin = () => {
           </form>
 
           <div className="login-footer">
-            <p>Akkauntingiz yo'qmi? Administrator bilan bog'laning.</p>
+            <p>Muvaffaqiyatli kirgandan keyin Telegram akkauntingiz avtomatik bog'lanadi.</p>
           </div>
         </div>
       </div>
