@@ -22,7 +22,7 @@ const GroupDetail = ({ group, onBack }) => {
   const loadTableData = async () => {
     try {
       setLoading(true)
-      const response = await apiCall(`/student-records/group/${group._id}/table?days=3`, {
+      const response = await apiCall(`/student-records/group/${group._id}/table`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -96,28 +96,15 @@ const GroupDetail = ({ group, onBack }) => {
         requestData.grade = data.grade
       }
 
-      let response
-      if (selectedStudent.record) {
-        // Update existing record
-        response = await apiCall(`/student-records/${selectedStudent.record._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        })
-      } else {
-        // Create new record
-        response = await apiCall('/student-records', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        })
-      }
+      // Use create-or-update endpoint
+      const response = await apiCall('/student-records/create-or-update', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      })
 
       if (response.ok) {
         setSuccess('Ma\'lumot saqlandi')
@@ -160,20 +147,9 @@ const GroupDetail = ({ group, onBack }) => {
     if (!tableData) return []
     
     const today = new Date().toISOString().split('T')[0]
-    const activeDates = []
     
-    // Check each date except today
-    tableData.dates.forEach(date => {
-      if (date !== today) {
-        // Check if any student has a record for this date
-        const hasRecords = tableData.students.some(student => 
-          tableData.records[student._id] && tableData.records[student._id][date]
-        )
-        if (hasRecords) {
-          activeDates.push(date)
-        }
-      }
-    })
+    // Return all dates except today (backend already filters dates with records)
+    const activeDates = tableData.dates.filter(date => date !== today)
     
     return activeDates
   }
