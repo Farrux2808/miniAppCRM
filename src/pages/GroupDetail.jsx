@@ -1,130 +1,133 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { apiCall } from '../utils/api'
-import GradeModal from '../components/GradeModal'
+import RecordModal from '../components/RecordModal'
 
 const GroupDetail = ({ group, onBack }) => {
-  const [lessons, setLessons] = useState([])
+  const [tableData, setTableData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [selectedRecord, setSelectedRecord] = useState(null)
+  const [selectedStudent, setSelectedStudent] = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const [students, setStudents] = useState([])
+  const [modalType, setModalType] = useState('attendance') // 'attendance' or 'grade'
   const { authToken } = useAuth()
 
   useEffect(() => {
     if (group && authToken) {
-      loadGroupStudents()
-      loadLessons()
+      loadTableData()
     }
   }, [group, authToken])
 
-  const loadGroupStudents = async () => {
-    try {
-      const response = await apiCall(`/groups/${group._id}/students`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      })
-
-      if (response.ok) {
-        const studentsData = await response.json()
-        setStudents(studentsData)
-        console.log('Students loaded:', studentsData)
-      } else {
-        console.error('Failed to load students')
-      }
-    } catch (error) {
-      console.error('Error loading students:', error)
-    }
-  }
-
-  const loadLessons = async () => {
+  const loadTableData = async () => {
     try {
       setLoading(true)
-      const response = await apiCall('/lesson-records/teacher/lessons', {
+      const response = await apiCall(`/student-records/group/${group._id}/table?days=3`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
       })
 
       if (response.ok) {
-        const lessonsData = await response.json()
-        // Filter lessons for current group and get last 2 lessons
-        const groupLessons = lessonsData
-          .filter(lesson => lesson.groupId._id === group._id)
-          .slice(0, 2) // Get last 2 lessons
-        
-        setLessons(groupLessons)
-        console.log('Lessons loaded:', groupLessons)
+        const data = await response.json()
+        setTableData(data)
+        console.log('Table data loaded:', data)
       } else {
-        setError('Darslarni yuklashda xatolik')
+        setError('Ma\'lumotlarni yuklashda xatolik')
       }
     } catch (error) {
-      console.error('Error loading lessons:', error)
-      setError('Darslarni yuklashda xatolik')
+      console.error('Error loading table data:', error)
+      setError('Ma\'lumotlarni yuklashda xatolik')
     } finally {
       setLoading(false)
     }
   }
 
-  const createNewLesson = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      
-      const response = await apiCall('/lesson-records/create-daily', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          groupId: group._id,
-          lessonDate: today
-        })
-      })
+  const handleCellClick = (student, dateKey) => {
+    const record = tableData.records[student._id]?.[dateKey]
+    setSelectedStudent({
+      student,
+      dateKey,
+      record: record || null
+    })
+    setShowModal(true)
+  }
 
-      if (response.ok) {
-        setSuccess('Yangi dars muvaffaqiyatli yaratildi')
-        setTimeout(() => setSuccess(''), 3000)
-        loadLessons() // Reload lessons after creating new one
+  const handleTodayAction = async (student) => {
+    try {
+      // Check if student has today's record
+      const today = new Date().toISOString().split('T')[0]
+      const todayRecord = tableData.records[student._id]?.[today]
+      
+      setSelectedStudent({
+        student,
+        dateKey: today,
+        record: todayRecord || null
+      })
+      
+      // If student is already marked as present, show grade modal
+      if (todayRecord && todayRecord.attendanceStatus === 'present') {
+        setModalType('grade')
       } else {
-        const errorData = await response.json()
-        setError(errorData.message || 'Dars yaratishda xatolik')
-        setTimeout(() => setError(''), 3000)
+        setModalType('attendance')
       }
+      
+      setShowModal(true)
     } catch (error) {
-      console.error('Error creating lesson:', error)
-      setError('Dars yaratishda xatolik')
+      console.error('Error handling today action:', error)
+      setError('Xatolik yuz berdi')
       setTimeout(() => setError(''), 3000)
     }
   }
 
-  const handleCellClick = (record, lessonIndex) => {
-    setSelectedRecord({ ...record, lessonIndex })
-    setShowModal(true)
-  }
-
   const handleModalSave = async (data) => {
     try {
-      const response = await apiCall(`/lesson-records/${selectedRecord._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      })
+      const today = new Date().toISOString().split('T')[0]
+      const requestData = {
+        groupId: group._id,
+        userId: selectedStudent.student._id,
+        date: today,
+        attendanceStatus: data.attendanceStatus,
+        comment: data.comment,
+        notifyParents: data.notifyParents
+      }
+
+      if (data.grade !== undefined && data.grade !== null) {
+        requestData.grade = data.grade
+      }
+
+      let response
+      if (selectedStudent.record) {
+        // Update existing record
+        response = await apiCall(`/student-records/${selectedStudent.record._id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        })
+      } else {
+        // Create new record
+        response = await apiCall('/student-records', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        })
+      }
 
       if (response.ok) {
         setSuccess('Ma\'lumot saqlandi')
         setTimeout(() => setSuccess(''), 3000)
-        loadLessons()
+        loadTableData() // Reload table data
         setShowModal(false)
-        setSelectedRecord(null)
+        setSelectedStudent(null)
       } else {
-        setError('Saqlashda xatolik')
+        const errorData = await response.json()
+        setError(errorData.message || 'Saqlashda xatolik')
         setTimeout(() => setError(''), 3000)
       }
     } catch (error) {
@@ -136,18 +139,34 @@ const GroupDetail = ({ group, onBack }) => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('uz-UZ', { 
-      day: '2-digit', 
-      month: '2-digit' 
-    })
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    if (dateString === today.toISOString().split('T')[0]) {
+      return 'Bugun'
+    } else if (dateString === yesterday.toISOString().split('T')[0]) {
+      return 'Kecha'
+    } else {
+      return date.toLocaleDateString('uz-UZ', { 
+        day: '2-digit', 
+        month: '2-digit' 
+      })
+    }
   }
 
-  const getCellContent = (record) => {
-    if (!record) return { text: '-', className: 'empty' }
+  const getCellContent = (student, dateKey) => {
+    const record = tableData.records[student._id]?.[dateKey]
+    if (!record) {
+      return { text: '-', className: 'empty' }
+    }
     
-    switch (record.type) {
-      case 'grade':
-        return { text: record.grade, className: 'grade' }
+    switch (record.attendanceStatus) {
+      case 'present':
+        if (record.grade !== undefined && record.grade !== null) {
+          return { text: record.grade, className: 'grade' }
+        }
+        return { text: '✓', className: 'present' }
       case 'absent_unexcused':
         return { text: 'Yo\'q', className: 'absent' }
       case 'absent_excused':
@@ -157,10 +176,30 @@ const GroupDetail = ({ group, onBack }) => {
     }
   }
 
-  const getStudentRecord = (studentId, lessonIndex) => {
-    if (lessonIndex >= lessons.length) return null
-    const lesson = lessons[lessonIndex]
-    return lesson.records.find(record => record.studentId._id === studentId)
+  const getTodayButtonText = (student) => {
+    const today = new Date().toISOString().split('T')[0]
+    const todayRecord = tableData.records[student._id]?.[today]
+    
+    if (!todayRecord) {
+      return 'Yo\'qlama'
+    } else if (todayRecord.attendanceStatus === 'present') {
+      return 'Baho'
+    } else {
+      return 'O\'zgartirish'
+    }
+  }
+
+  const getTodayButtonClass = (student) => {
+    const today = new Date().toISOString().split('T')[0]
+    const todayRecord = tableData.records[student._id]?.[today]
+    
+    if (!todayRecord) {
+      return 'attendance-btn'
+    } else if (todayRecord.attendanceStatus === 'present') {
+      return 'grade-btn'
+    } else {
+      return 'edit-btn'
+    }
   }
 
   if (loading) {
@@ -170,6 +209,23 @@ const GroupDetail = ({ group, onBack }) => {
           ← Orqaga
         </div>
         <div className="loading">Ma'lumotlar yuklanmoqda...</div>
+      </div>
+    )
+  }
+
+  if (!tableData || tableData.students.length === 0) {
+    return (
+      <div>
+        <div className="back-button" onClick={onBack}>
+          ← Orqaga
+        </div>
+        <h1 className="page-title">{group.name}</h1>
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
+          <p style={{ color: 'var(--tg-theme-hint-color, #666)' }}>
+            Bu guruhda faol o'quvchilar topilmadi
+          </p>
+        </div>
       </div>
     )
   }
@@ -185,76 +241,53 @@ const GroupDetail = ({ group, onBack }) => {
       {error && <div className="error">{error}</div>}
       {success && <div className="success">{success}</div>}
 
-      {students.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
-          <p style={{ color: 'var(--tg-theme-hint-color, #666)' }}>
-            Bu guruhda o'quvchilar topilmadi
-          </p>
-        </div>
-      ) : (
-        <div className="grade-table">
-          <div className="table-header">
-            <div>O'quvchi</div>
-            <div>{lessons[1] ? formatDate(lessons[1].lessonDate) : 'Dars 1'}</div>
-            <div>{lessons[0] ? formatDate(lessons[0].lessonDate) : 'Dars 2'}</div>
-            <div>Yangi</div>
-          </div>
-
-          {students.map((student) => (
-            <div key={student._id} className="table-row">
-              <div className="student-name">
-                {student.firstName} {student.lastName}
-              </div>
-              
-              {/* Previous lesson 1 */}
-              <div 
-                className={`grade-cell ${getCellContent(getStudentRecord(student._id, 1)).className}`}
-                onClick={() => {
-                  const record = getStudentRecord(student._id, 1)
-                  if (record) handleCellClick(record, 1)
-                }}
-              >
-                {getCellContent(getStudentRecord(student._id, 1)).text}
-              </div>
-
-              {/* Previous lesson 2 */}
-              <div 
-                className={`grade-cell ${getCellContent(getStudentRecord(student._id, 0)).className}`}
-                onClick={() => {
-                  const record = getStudentRecord(student._id, 0)
-                  if (record) handleCellClick(record, 0)
-                }}
-              >
-                {getCellContent(getStudentRecord(student._id, 0)).text}
-              </div>
-
-              {/* Add new lesson button - only show for first student */}
-              <div>
-                {student === students[0] ? (
-                  <button 
-                    className="add-lesson-btn"
-                    onClick={createNewLesson}
-                    title="Yangi dars qo'shish"
-                  >
-                    +
-                  </button>
-                ) : (
-                  <div style={{ width: '60px', height: '36px' }}></div>
-                )}
-              </div>
-            </div>
+      <div className="grade-table">
+        <div className="table-header">
+          <div>O'quvchi</div>
+          {tableData.dates.map(date => (
+            <div key={date}>{formatDate(date)}</div>
           ))}
+          <div>Amal</div>
         </div>
-      )}
 
-      {showModal && selectedRecord && (
-        <GradeModal
-          record={selectedRecord}
+        {tableData.students.map((student) => (
+          <div key={student._id} className="table-row">
+            <div className="student-name">
+              {student.firstName} {student.lastName}
+            </div>
+            
+            {tableData.dates.map(date => (
+              <div 
+                key={date}
+                className={`grade-cell ${getCellContent(student, date).className}`}
+                onClick={() => handleCellClick(student, date)}
+              >
+                {getCellContent(student, date).text}
+              </div>
+            ))}
+
+            <div>
+              <button 
+                className={`action-btn ${getTodayButtonClass(student)}`}
+                onClick={() => handleTodayAction(student)}
+              >
+                {getTodayButtonText(student)}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showModal && selectedStudent && (
+        <RecordModal
+          student={selectedStudent.student}
+          record={selectedStudent.record}
+          type={modalType}
           onSave={handleModalSave}
           onClose={() => {
             setShowModal(false)
-            setSelectedRecord(null)
+            setSelectedStudent(null)
+            setModalType('attendance')
           }}
         />
       )}
