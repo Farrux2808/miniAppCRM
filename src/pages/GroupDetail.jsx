@@ -30,8 +30,8 @@ const GroupDetail = ({ group, onBack }) => {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('Table data received:', data)
         setTableData(data)
-        console.log('Table data loaded:', data)
       } else {
         setError('Ma\'lumotlarni yuklashda xatolik')
       }
@@ -181,7 +181,7 @@ const GroupDetail = ({ group, onBack }) => {
   const getCellContent = (student, dateKey) => {
     const record = tableData.records[student._id]?.[dateKey]
     if (!record) {
-      return { text: '-', className: 'empty' }
+      return null // Don't show empty cells for past dates
     }
     
     switch (record.attendanceStatus) {
@@ -195,7 +195,7 @@ const GroupDetail = ({ group, onBack }) => {
       case 'absent_excused':
         return { text: 'Sab.', className: 'excused' }
       default:
-        return { text: '-', className: 'empty' }
+        return null
     }
   }
 
@@ -290,12 +290,21 @@ const GroupDetail = ({ group, onBack }) => {
             </div>
             
                 {activeDates.map(date => (
-              <div 
-                key={date}
-                className={`grade-cell ${getCellContent(student, date).className}`}
-                onClick={() => handleCellClick(student, date)}
-              >
-                {getCellContent(student, date).text}
+              <div key={date}>
+                {(() => {
+                  const cellContent = getCellContent(student, date)
+                  if (!cellContent) {
+                    return <div className="grade-cell empty">-</div>
+                  }
+                  return (
+                    <div 
+                      className={`grade-cell ${cellContent.className}`}
+                      onClick={() => handleCellClick(student, date)}
+                    >
+                      {cellContent.text}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
 
