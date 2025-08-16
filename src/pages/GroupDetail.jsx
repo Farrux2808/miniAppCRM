@@ -83,6 +83,9 @@ const GroupDetail = ({ group, onBack }) => {
   const handleModalSave = async (data) => {
     try {
       const today = new Date().toISOString().split('T')[0]
+      console.log('Saving modal data:', data);
+      console.log('Selected student:', selectedStudent);
+      
       const requestData = {
         groupId: group._id,
         userId: selectedStudent.student._id,
@@ -96,6 +99,8 @@ const GroupDetail = ({ group, onBack }) => {
         requestData.grade = data.grade
       }
 
+      console.log('Request data:', requestData);
+
       // Use create-or-update endpoint
       const response = await apiCall('/student-records/create-or-update', {
         method: 'POST',
@@ -107,6 +112,8 @@ const GroupDetail = ({ group, onBack }) => {
       })
 
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('Save response:', responseData);
         setSuccess('Ma\'lumot saqlandi')
         setTimeout(() => setSuccess(''), 3000)
         loadTableData() // Reload table data
@@ -114,6 +121,7 @@ const GroupDetail = ({ group, onBack }) => {
         setSelectedStudent(null)
       } else {
         const errorData = await response.json()
+        console.error('Save error:', errorData);
         setError(errorData.message || 'Saqlashda xatolik')
         setTimeout(() => setError(''), 3000)
       }
@@ -156,6 +164,8 @@ const GroupDetail = ({ group, onBack }) => {
 
   const getCellContent = (student, dateKey) => {
     const record = tableData.records[student._id]?.[dateKey]
+    console.log(`Getting cell content for student ${student.firstName} ${student.lastName} on ${dateKey}:`, record);
+    
     if (!record) {
       return null // Don't show empty cells for past dates
     }
@@ -163,14 +173,19 @@ const GroupDetail = ({ group, onBack }) => {
     switch (record.attendanceStatus) {
       case 'present':
         if (record.grade !== undefined && record.grade !== null) {
-          return { text: record.grade, className: 'grade' }
+          console.log(`Student has grade: ${record.grade}`);
+          return { text: record.grade.toString(), className: 'grade' }
         }
+        console.log('Student is present but no grade');
         return { text: '✓', className: 'present' }
       case 'absent_unexcused':
+        console.log('Student absent unexcused');
         return { text: 'Yo\'q', className: 'absent' }
       case 'absent_excused':
+        console.log('Student absent excused');
         return { text: 'Sab.', className: 'excused' }
       default:
+        console.log('Unknown attendance status:', record.attendanceStatus);
         return null
     }
   }
