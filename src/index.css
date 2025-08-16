@@ -147,20 +147,52 @@ body {
   background: var(--primary-color);
   color: white;
   padding: 16px;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 80px;
+  display: flex;
   gap: 12px;
   font-weight: 600;
   font-size: 14px;
 }
 
+.table-header > div:first-child {
+  flex: 2;
+  min-width: 120px;
+}
+
+.table-header > div:not(:first-child):not(:last-child) {
+  flex: 1;
+  min-width: 60px;
+  text-align: center;
+}
+
+.table-header > div:last-child {
+  flex: 1;
+  min-width: 80px;
+  text-align: center;
+}
+
 .table-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 80px;
+  display: flex;
   gap: 12px;
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   align-items: center;
+}
+
+.table-row > div:first-child {
+  flex: 2;
+  min-width: 120px;
+}
+
+.table-row > div:not(:first-child):not(:last-child) {
+  flex: 1;
+  min-width: 60px;
+}
+
+.table-row > div:last-child {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  justify-content: center;
 }
 
 .table-row:last-child {
@@ -573,11 +605,32 @@ body {
 }
 
 @media (max-width: 480px) {
-  .table-header,
-  .table-row {
-    grid-template-columns: 1.5fr 0.8fr 0.8fr 60px;
+  .table-header {
     gap: 8px;
     padding: 12px;
+  }
+  
+  .table-row {
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .table-header > div:first-child,
+  .table-row > div:first-child {
+    flex: 1.5;
+    min-width: 100px;
+  }
+  
+  .table-header > div:not(:first-child):not(:last-child),
+  .table-row > div:not(:first-child):not(:last-child) {
+    flex: 0.8;
+    min-width: 50px;
+  }
+  
+  .table-header > div:last-child,
+  .table-row > div:last-child {
+    flex: 0.8;
+    min-width: 60px;
   }
   
   .grade-cell {
@@ -586,9 +639,9 @@ body {
     min-height: 32px;
   }
   
-  .add-lesson-btn {
-    width: 50px;
-    height: 32px;
-    font-size: 16px;
+  .action-btn {
+    padding: 6px 8px;
+    font-size: 10px;
+    min-width: 60px;
   }
 }

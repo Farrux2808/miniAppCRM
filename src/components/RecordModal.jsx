@@ -22,8 +22,8 @@ const RecordModal = ({ student, record, type, onSave, onClose }) => {
     // Add grade if student is present and grade is provided
     if (attendanceStatus === 'present' && grade !== '') {
       const gradeValue = parseInt(grade)
-      if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
-        alert('Baho 0 dan 100 gacha bo\'lishi kerak')
+      if (isNaN(gradeValue) || gradeValue < 1 || gradeValue > 10) {
+        alert('Baho 1 dan 10 gacha bo\'lishi kerak')
         return
       }
       data.grade = gradeValue
@@ -80,11 +80,11 @@ const RecordModal = ({ student, record, type, onSave, onClose }) => {
             <input
               type="number"
               className="grade-input"
-              placeholder="Baho (0-100)"
+              placeholder="Baho (1-10)"
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
-              min="0"
-              max="100"
+              min="1"
+              max="10"
             />
           </div>
         )}

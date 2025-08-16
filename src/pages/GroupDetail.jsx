@@ -155,6 +155,29 @@ const GroupDetail = ({ group, onBack }) => {
     }
   }
 
+  // Filter dates that have at least one record
+  const getActiveDates = () => {
+    if (!tableData) return []
+    
+    const today = new Date().toISOString().split('T')[0]
+    const activeDates = []
+    
+    // Check each date except today
+    tableData.dates.forEach(date => {
+      if (date !== today) {
+        // Check if any student has a record for this date
+        const hasRecords = tableData.students.some(student => 
+          tableData.records[student._id] && tableData.records[student._id][date]
+        )
+        if (hasRecords) {
+          activeDates.push(date)
+        }
+      }
+    })
+    
+    return activeDates
+  }
+
   const getCellContent = (student, dateKey) => {
     const record = tableData.records[student._id]?.[dateKey]
     if (!record) {
@@ -183,7 +206,11 @@ const GroupDetail = ({ group, onBack }) => {
     if (!todayRecord) {
       return 'Yo\'qlama'
     } else if (todayRecord.attendanceStatus === 'present') {
-      return 'Baho'
+      if (todayRecord.grade !== undefined && todayRecord.grade !== null) {
+        return `Baho: ${todayRecord.grade}`
+      } else {
+        return 'Baho'
+      }
     } else {
       return 'O\'zgartirish'
     }
@@ -242,12 +269,18 @@ const GroupDetail = ({ group, onBack }) => {
       {success && <div className="success">{success}</div>}
 
       <div className="grade-table">
+        {(() => {
+          const activeDates = getActiveDates()
+          const columnCount = activeDates.length + 2 // student name + today action
+          
+          return (
+            <>
         <div className="table-header">
           <div>O'quvchi</div>
-          {tableData.dates.map(date => (
+              {activeDates.map(date => (
             <div key={date}>{formatDate(date)}</div>
           ))}
-          <div>Amal</div>
+              <div>Bugun</div>
         </div>
 
         {tableData.students.map((student) => (
@@ -256,7 +289,7 @@ const GroupDetail = ({ group, onBack }) => {
               {student.firstName} {student.lastName}
             </div>
             
-            {tableData.dates.map(date => (
+                {activeDates.map(date => (
               <div 
                 key={date}
                 className={`grade-cell ${getCellContent(student, date).className}`}
@@ -276,6 +309,9 @@ const GroupDetail = ({ group, onBack }) => {
             </div>
           </div>
         ))}
+            </>
+          )
+        })()}
       </div>
 
       {showModal && selectedStudent && (
